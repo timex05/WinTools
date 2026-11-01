@@ -1,14 +1,14 @@
-# ToolStick Portable Downloads
+# WinTools Portable Downloads
 
 Dieses Repository enthält PowerShell-Skripte zum Herunterladen portabler Windows-Werkzeuge. Jedes Programm liegt in einem eigenen Unterordner von `Portable-Tools`. ZIP-Pakete werden dort entpackt; direkt startbare EXE-Dateien werden dort gespeichert. Die Skripte installieren und starten keine Programme.
 
 ```text
-ToolStick/
+WinTools/
 ├── README.md
 ├── configs/
 │   ├── gaming-safe.winhance
-│   ├── gaming-custom.winhance
-│   └── gaming-custom-entscheidungen.csv
+│   ├── gaming-extreme.winhance
+│   └── gaming-extreme-entscheidungen.csv
 ├── scripts/
 │   ├── Download-PortableTools.ps1
 │   ├── Install-Online.ps1
@@ -26,10 +26,10 @@ ToolStick/
 In PowerShell ausführen:
 
 ```powershell
-irm https://raw.githubusercontent.com/timex05/ToolStick/main/scripts/Install-Online.ps1 | iex
+irm https://raw.githubusercontent.com/timex05/WinTools/main/scripts/Install-Online.ps1 | iex
 ```
 
-Das legt `ToolStick` im Benutzerprofil an, speichert dort die README, beide Winhance-Konfigurationen und alle Skripte und lädt die portablen Programme nach `ToolStick\Portable-Tools`. Die Entscheidungs-CSV bleibt im Repository und wird nicht heruntergeladen.
+Das legt `WinTools` im Benutzerprofil an, speichert dort die README, beide Winhance-Konfigurationen und alle Skripte und lädt die portablen Programme nach `WinTools\Portable-Tools`. Die Entscheidungs-CSV bleibt im Repository und wird nicht heruntergeladen.
 
 ## Lokal ausführen
 
@@ -49,10 +49,10 @@ Für GPU-Z wird `winget` benötigt. Die übrigen Dateien kommen von den offiziel
 
 Die Datei [`configs/gaming-safe.winhance`](configs/gaming-safe.winhance) aktiviert nur **Game Mode** und **Optimierungen für Fensterspiele**. Sie entfernt keine Apps und ändert weder Sicherheitsfunktionen noch Dienste oder Energiepläne.
 
-Die Datei [`configs/gaming-custom.winhance`](configs/gaming-custom.winhance) ist ein allgemeines Windows-11-Gaming-Profil. Sie wählt Chrome, Steam, Epic Games Launcher, Discord, OBS Studio und Revo Uninstaller zur Installation. Sie entfernt ausgewählte nicht genutzte Windows-Apps und Recall. Microsoft Store sowie Xbox Identity Provider und Xbox Live In-Game Experience bleiben erhalten. Die einzelnen Entscheidungen stehen in [`configs/gaming-custom-entscheidungen.csv`](configs/gaming-custom-entscheidungen.csv).
+Die Datei [`configs/gaming-extreme.winhance`](configs/gaming-extreme.winhance) ist das umfangreichere Windows-11-Gaming-Profil. Sie wählt Chrome, Steam, Epic Games Launcher, Discord, OBS Studio und Revo Uninstaller zur Installation. Sie entfernt 31 nicht genutzte Windows-Apps sowie Recall, darunter Xbox, Xbox Game Bar, Copilot, OneDrive, OneNote und Media Player. Microsoft Store sowie Xbox Identity Provider und Xbox Live In-Game Experience bleiben erhalten. Die einzelnen Entscheidungen stehen in [`configs/gaming-extreme-entscheidungen.csv`](configs/gaming-extreme-entscheidungen.csv).
 
-Das Profil aktiviert Spielmodus, Optimierungen für Fensterspiele und die Option **Task beenden** im Taskleisten-Kontextmenü. Startmenü, Taskleiste, Explorer und Design folgen den gewählten Einstellungen: keine Empfehlungen, Taskleiste links mit Suchsymbol und ohne Widgets, Explorer-Start bei „Dieser PC“, klassisches Kontextmenü, sichtbare Dateiendungen und versteckte Dateien, dunkles Design ohne Transparenzeffekte. Hardwareabhängige Registry-Tweaks, das Abschalten von Sicherheitsfunktionen und das Deaktivieren von Windows-Updates sind nicht enthalten.
+Das extreme Profil aktiviert Spielmodus, Optimierungen für Fensterspiele und die Option **Task beenden** im Taskleisten-Kontextmenü. Startmenü, Taskleiste, Explorer und Design folgen den gewählten Einstellungen: keine Empfehlungen, Taskleiste links mit Suchsymbol und ohne Widgets, Explorer-Start bei „Dieser PC“, klassisches Kontextmenü, sichtbare Dateiendungen und versteckte Dateien, dunkles Design ohne Transparenzeffekte. Hardwareabhängige Registry-Tweaks, das Abschalten von Sicherheitsfunktionen und das Deaktivieren von Windows-Updates sind nicht enthalten.
 
 Winhance kann Autostart-Apps global um zehn Sekunden verzögern, aber nicht pro App aus dieser Konfiguration entfernen oder beim Spielstart automatisch beenden. Autostart einzelner Apps unter **Einstellungen → Apps → Autostart** oder im Task-Manager verwalten. Die aktivierte Option **Task beenden** erlaubt das manuelle Beenden laufender Apps per Rechtsklick auf der Taskleiste.
 
-Winhance ist nicht Teil des automatischen Downloads, weil seine portable Ausgabe über den eigenen Installer bereitgestellt wird. In Winhance Portable **Import Config** → **Import my own config** wählen und die gewünschte `.winhance`-Datei öffnen. Im standardmäßig aktivierten Review Mode alle Änderungen prüfen und **Apply Config** wählen. Die Funktion zum Überspringen der Prüfung ausgeschaltet lassen. Bei `gaming-custom.winhance` App-Entfernungen und App-Installationen im Importdialog ausdrücklich auswählen, wenn sie sofort ausgeführt werden sollen.
+Winhance ist nicht Teil des automatischen Downloads, weil seine portable Ausgabe über den eigenen Installer bereitgestellt wird. In Winhance Portable **Import Config** → **Import my own config** wählen und die gewünschte `.winhance`-Datei öffnen. Im standardmäßig aktivierten Review Mode alle Änderungen prüfen und **Apply Config** wählen. Die Funktion zum Überspringen der Prüfung ausgeschaltet lassen. Bei `gaming-extreme.winhance` App-Entfernungen und App-Installationen im Importdialog ausdrücklich auswählen, wenn sie sofort ausgeführt werden sollen.

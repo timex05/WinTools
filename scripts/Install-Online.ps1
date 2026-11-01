@@ -1,8 +1,8 @@
-# Can be run locally or via: irm https://raw.githubusercontent.com/timex05/ToolStick/main/scripts/Install-Online.ps1 | iex
-param([string]$Target = (Join-Path $env:USERPROFILE 'ToolStick'))
+# Can be run locally or via: irm https://raw.githubusercontent.com/timex05/WinTools/main/scripts/Install-Online.ps1 | iex
+param([string]$Target = (Join-Path $env:USERPROFILE 'WinTools'))
 
 $ErrorActionPreference = 'Stop'
-$source = 'https://raw.githubusercontent.com/timex05/ToolStick/main'
+$source = 'https://raw.githubusercontent.com/timex05/WinTools/main'
 $scriptDirectory = Join-Path $Target 'scripts'
 $configDirectory = Join-Path $Target 'configs'
 $files = @(
@@ -20,6 +20,6 @@ try {
     }
     Invoke-WebRequest -Uri "$source/README.md" -UseBasicParsing -OutFile (Join-Path $Target 'README.md')
     Invoke-WebRequest -Uri "$source/configs/gaming-safe.winhance" -UseBasicParsing -OutFile (Join-Path $configDirectory 'gaming-safe.winhance')
-    Invoke-WebRequest -Uri "$source/configs/gaming-custom.winhance" -UseBasicParsing -OutFile (Join-Path $configDirectory 'gaming-custom.winhance')
+    Invoke-WebRequest -Uri "$source/configs/gaming-extreme.winhance" -UseBasicParsing -OutFile (Join-Path $configDirectory 'gaming-extreme.winhance')
     & (Join-Path $scriptDirectory 'Download-PortableTools.ps1') -Destination (Join-Path $Target 'Portable-Tools')
 } catch {}

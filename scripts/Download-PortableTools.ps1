@@ -8,10 +8,10 @@ $ErrorActionPreference = 'Stop'
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
 if ((Test-Path $Destination) -and
     @(Get-ChildItem -LiteralPath $Destination -Force).Count -gt 0 -and
-    -not (Test-Path (Join-Path $Destination '.toolstick-portable-tools'))) { return }
+    -not (Test-Path (Join-Path $Destination '.wintools-portable-tools'))) { return }
 $null = New-Item -ItemType Directory -Path $Destination -Force
 $Destination = (Resolve-Path $Destination).Path
-Set-Content -LiteralPath (Join-Path $Destination '.toolstick-portable-tools') -Value 'ToolStick portable tools' -Encoding Ascii
+Set-Content -LiteralPath (Join-Path $Destination '.wintools-portable-tools') -Value 'WinTools portable tools' -Encoding Ascii
 
 function Get-PageLinks {
     param([string]$Page)
@@ -83,7 +83,7 @@ function Save-Portable {
 
 function Get-GitHubAsset {
     param([string]$Repository, [string]$Pattern)
-    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repository/releases/latest" -Headers @{ 'User-Agent' = 'ToolStick-Portable-Downloader' }
+    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repository/releases/latest" -Headers @{ 'User-Agent' = 'WinTools-Portable-Downloader' }
     $release.assets | Where-Object { $_.name -match $Pattern } | Select-Object -First 1
 }
 

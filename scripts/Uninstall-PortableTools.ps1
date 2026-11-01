@@ -3,7 +3,7 @@ param(
     [string]$Destination = (Join-Path (Split-Path -Parent $PSScriptRoot) 'Portable-Tools')
 )
 
-$marker = Join-Path $Destination '.toolstick-portable-tools'
+$marker = Join-Path $Destination '.wintools-portable-tools'
 if (Test-Path -LiteralPath $marker) {
     Remove-Item -LiteralPath $Destination -Recurse -Force -ErrorAction SilentlyContinue
 }
