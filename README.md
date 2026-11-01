@@ -1,6 +1,6 @@
 # WinTools Portable Downloads
 
-Dieses Repository enthält PowerShell-Skripte zum Herunterladen portabler Windows-Werkzeuge. Jedes Programm liegt in einem eigenen Unterordner von `Portable-Tools`. ZIP-Pakete werden dort entpackt; direkt startbare EXE-Dateien werden dort gespeichert. Die Skripte installieren und starten keine Programme.
+Dieses Repository enthält PowerShell-Skripte zum Herunterladen portabler Windows-Werkzeuge und des Winhance-Installers mit Portable-Option. Jedes Programm liegt in einem eigenen Unterordner von `Portable-Tools`. ZIP-Pakete werden dort entpackt; EXE-Dateien werden dort gespeichert. Die Skripte installieren und starten keine Programme.
 
 ```text
 WinTools/
@@ -43,9 +43,11 @@ Das legt `WinTools` im Benutzerprofil an und startet direkt den Download der por
 
 `Update` entfernt den bisherigen Programmordner und lädt die aktuellen Ausgaben neu. `Uninstall` entfernt nur einen Programmordner, der vom Downloadskript markiert wurde. Ein anderer Zielordner kann mit `-Destination 'D:\MeineTools'` übergeben werden.
 
-Enthalten sind die portablen Ausgaben von CPU-Z, HWMonitor, HWiNFO, WizTree, CrystalDiskInfo, CrystalDiskMark, Revo Uninstaller, HDD Low Level Format Tool, ServiWin, Rufus, GPU-Z und DDU. Downloads, die vom Anbieter nicht als portable Fassung angeboten werden, werden ausgelassen. Auch nicht erreichbare Downloads werden ohne Fehlermeldung übersprungen.
+Enthalten sind die portablen Ausgaben von CPU-Z, HWMonitor, HWiNFO, WizTree, CrystalDiskInfo, CrystalDiskMark, Revo Uninstaller, HDD Low Level Format Tool, ServiWin, Rufus, GPU-Z und DDU. Zusätzlich wird der offizielle Winhance-Installer mit Portable-Option gespeichert. Nicht erreichbare Downloads werden übersprungen. Mit `.\scripts\Download-PortableTools.ps1 -Verbose` werden zusätzliche Diagnosemeldungen angezeigt.
 
-Für GPU-Z wird `winget` benötigt. Die übrigen Dateien kommen von den offiziellen Downloadseiten oder GitHub-Releases der Entwickler. Die Skripte wurden unter Linux erstellt; ein Lauf unter Windows wurde hier nicht ausgeführt.
+Die Dateien kommen von den offiziellen Downloadseiten, deren verlinkten Mirrors oder GitHub-Releases der Entwickler. GPU-Z wird über die Mirror-Auswahl von TechPowerUp geladen und benötigt kein `winget`. HWiNFO versucht bei einem fehlgeschlagenen Download den nächsten offiziellen ZIP-Mirror. CrystalDiskInfo und CrystalDiskMark verwenden nach Auflösung des Herstellerlinks den direkten SourceForge-Dateidownload.
+
+Fehlende Tools lassen sich durch erneutes Ausführen des Einzeilers oder von `Download-PortableTools.ps1` nachladen. Bereits gefüllte Tool-Ordner werden dabei nicht erneuert. Enthält ein fehlgeschlagener Download noch Dateien, zuerst nur den betroffenen Unterordner in `Portable-Tools` löschen und erneut herunterladen. Die Skripte wurden unter Linux erstellt; ein Lauf unter Windows wurde hier nicht ausgeführt.
 
 ## Gaming-Konfigurationen für Winhance
 
@@ -59,4 +61,4 @@ Die **Windows Update Policy** steht im extremen Profil auf **Disabled / Deaktivi
 
 Winhance kann Autostart-Apps global um zehn Sekunden verzögern, aber nicht pro App aus dieser Konfiguration entfernen oder beim Spielstart automatisch beenden. Autostart einzelner Apps unter **Einstellungen → Apps → Autostart** oder im Task-Manager verwalten. Die aktivierte Option **Task beenden** erlaubt das manuelle Beenden laufender Apps per Rechtsklick auf der Taskleiste.
 
-Winhance ist nicht Teil des automatischen Downloads, weil seine portable Ausgabe über den eigenen Installer bereitgestellt wird. In Winhance Portable **Import Config** → **Import my own config** wählen und die gewünschte `.winhance`-Datei öffnen. Im standardmäßig aktivierten Review Mode alle Änderungen prüfen und **Apply Config** wählen. Die Funktion zum Überspringen der Prüfung ausgeschaltet lassen. Bei `gaming-extreme.winhance` App-Entfernungen und App-Installationen im Importdialog ausdrücklich auswählen, wenn sie sofort ausgeführt werden sollen.
+Winhance wird als `Portable-Tools\Winhance\Winhance.Installer.exe` heruntergeladen. Den Installer selbst starten und die Option **Portable** wählen. Anschließend in Winhance Portable **Import Config** → **Import my own config** wählen und die gewünschte `.winhance`-Datei öffnen. Im standardmäßig aktivierten Review Mode alle Änderungen prüfen und **Apply Config** wählen. Die Funktion zum Überspringen der Prüfung ausgeschaltet lassen. Bei `gaming-extreme.winhance` App-Entfernungen und App-Installationen im Importdialog ausdrücklich auswählen, wenn sie sofort ausgeführt werden sollen.

@@ -37,9 +37,10 @@ python3 -m json.tool configs/gaming-extreme.winhance >/dev/null
 
 ## Downloader rules
 
-- Add a tool to the relevant block in `Download-PortableTools.ps1` (`$tools`, CrystalDisk*, GitHub, winget, DDU). `Name` becomes the subfolder name.
+- Add a tool to the relevant block in `Download-PortableTools.ps1` (`$tools`, CrystalDisk*, GitHub, GPU-Z, DDU). `Name` becomes the subfolder name.
 - `Save-Portable` only accepts `.zip` and `.exe` URLs. ZIPs are checked by magic bytes, extracted, and deleted; EXEs are kept. Other formats are skipped.
-- GPU-Z is the only tool that needs `winget`; it uses `winget download --installer-type portable`. All others are direct vendor, redirect, or GitHub release downloads.
+- GPU-Z uses TechPowerUp's download form and mirror-selection POST to obtain the standalone EXE; no tool needs `winget`. The WinGet package is typed as `exe`, and its static download URL can be unavailable.
+- Winhance is downloaded as the official `Winhance.Installer.exe`, which offers a Portable option. Never run the installer automatically.
 - Missing downloads, bad mirrors, and network errors are swallowed on purpose; only a success count is printed. Do not turn these into hard failures without a deliberate design change.
 - A non-empty tool folder is never refreshed, even if stale. Delete `Portable-Tools/<Tool>` and re-run, or use Update to wipe everything.
 - The marker file gates both overwrite and uninstall. A non-empty destination without `.wintools-portable-tools` is left untouched.
