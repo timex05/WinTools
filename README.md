@@ -29,7 +29,7 @@ In PowerShell ausführen:
 irm https://raw.githubusercontent.com/timex05/WinTools/main/scripts/Install-Online.ps1 | iex
 ```
 
-Das legt `WinTools` im Benutzerprofil an, speichert dort die README, beide Winhance-Konfigurationen und alle Skripte und lädt die portablen Programme nach `WinTools\Portable-Tools`. Die Entscheidungs-CSV bleibt im Repository und wird nicht heruntergeladen.
+Das legt `WinTools` im Benutzerprofil an und startet direkt den Download der portablen Programme nach `WinTools\Portable-Tools`. Ein zweiter Skriptaufruf ist nicht nötig. Anschließend werden die README, beide Winhance-Konfigurationen und die übrigen Skripte gespeichert. Fehler beim Abruf dieser Begleitdateien verhindern den Tool-Download nicht. Die Entscheidungs-CSV bleibt im Repository und wird nicht heruntergeladen.
 
 ## Lokal ausführen
 
