@@ -701,7 +701,7 @@
             "Id": "updates-policy-mode",
             "Name": "Windows Update Policy",
             "InputType": 1,
-            "SelectedIndex": 0
+            "SelectedIndex": 3
           },
           {
             "Id": "updates-delivery-optimization",
