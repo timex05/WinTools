@@ -12,9 +12,12 @@ $downloadScript = Join-Path $scriptDirectory 'Download-PortableTools.ps1'
 try {
     $null = New-Item -ItemType Directory -Path $scriptDirectory -Force
     Invoke-WebRequest -Uri "$source/scripts/Download-PortableTools.ps1" -UseBasicParsing -OutFile $downloadScript
+    Write-Host "Lade portable Programme nach $(Join-Path $Target 'Portable-Tools') ..."
     $downloader = [scriptblock]::Create((Get-Content -LiteralPath $downloadScript -Raw))
     & $downloader -Destination (Join-Path $Target 'Portable-Tools')
-} catch {}
+} catch {
+    Write-Warning "Tool-Download konnte nicht ausgefuehrt werden: $($_.Exception.Message)"
+}
 
 # Keep the helper scripts and profiles for later use; failures are independent.
 $files = @(
