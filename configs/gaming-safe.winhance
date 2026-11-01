@@ -1,0 +1,43 @@
+{
+  "Version": "2.0",
+  "CreatedAt": "2026-11-01T00:00:00Z",
+  "WindowsApps": {
+    "IsIncluded": false,
+    "Items": []
+  },
+  "ExternalApps": {
+    "IsIncluded": false,
+    "Items": []
+  },
+  "Customize": {
+    "IsIncluded": false,
+    "Features": {}
+  },
+  "Optimize": {
+    "IsIncluded": true,
+    "Features": {
+      "GamingPerformance": {
+        "IsIncluded": true,
+        "Items": [
+          {
+            "Id": "gaming-game-mode",
+            "Name": "Game Mode",
+            "IsSelected": true,
+            "InputType": 0
+          },
+          {
+            "Id": "gaming-directx-flip-model",
+            "Name": "Optimizations for windowed games",
+            "IsSelected": true,
+            "InputType": 0
+          }
+        ]
+      },
+      "Notifications": { "IsIncluded": false, "Items": [] },
+      "Power": { "IsIncluded": false, "Items": [] },
+      "Privacy": { "IsIncluded": false, "Items": [] },
+      "Sound": { "IsIncluded": false, "Items": [] },
+      "Update": { "IsIncluded": false, "Items": [] }
+    }
+  }
+}

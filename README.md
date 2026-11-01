@@ -1,0 +1,58 @@
+# ToolStick Portable Downloads
+
+Dieses Repository enthält PowerShell-Skripte zum Herunterladen portabler Windows-Werkzeuge. Jedes Programm liegt in einem eigenen Unterordner von `Portable-Tools`. ZIP-Pakete werden dort entpackt; direkt startbare EXE-Dateien werden dort gespeichert. Die Skripte installieren und starten keine Programme.
+
+```text
+ToolStick/
+├── README.md
+├── configs/
+│   ├── gaming-safe.winhance
+│   ├── gaming-custom.winhance
+│   └── gaming-custom-entscheidungen.csv
+├── scripts/
+│   ├── Download-PortableTools.ps1
+│   ├── Install-Online.ps1
+│   ├── Update-PortableTools.ps1
+│   └── Uninstall-PortableTools.ps1
+└── Portable-Tools/
+    ├── CPU-Z/
+    ├── CrystalDiskInfo/
+    ├── HWiNFO/
+    └── ...
+```
+
+## Online starten
+
+In PowerShell ausführen:
+
+```powershell
+irm https://raw.githubusercontent.com/timex05/ToolStick/main/scripts/Install-Online.ps1 | iex
+```
+
+Das legt `ToolStick` im Benutzerprofil an, speichert dort die README, beide Winhance-Konfigurationen und alle Skripte und lädt die portablen Programme nach `ToolStick\Portable-Tools`. Die Entscheidungs-CSV bleibt im Repository und wird nicht heruntergeladen.
+
+## Lokal ausführen
+
+```powershell
+.\scripts\Download-PortableTools.ps1
+.\scripts\Update-PortableTools.ps1
+.\scripts\Uninstall-PortableTools.ps1
+```
+
+`Update` entfernt den bisherigen Programmordner und lädt die aktuellen Ausgaben neu. `Uninstall` entfernt nur einen Programmordner, der vom Downloadskript markiert wurde. Ein anderer Zielordner kann mit `-Destination 'D:\MeineTools'` übergeben werden.
+
+Enthalten sind die portablen Ausgaben von CPU-Z, HWMonitor, HWiNFO, WizTree, CrystalDiskInfo, CrystalDiskMark, Revo Uninstaller, HDD Low Level Format Tool, ServiWin, Rufus, GPU-Z und DDU. Downloads, die vom Anbieter nicht als portable Fassung angeboten werden, werden ausgelassen. Auch nicht erreichbare Downloads werden ohne Fehlermeldung übersprungen.
+
+Für GPU-Z wird `winget` benötigt. Die übrigen Dateien kommen von den offiziellen Downloadseiten oder GitHub-Releases der Entwickler. Die Skripte wurden unter Linux erstellt; ein Lauf unter Windows wurde hier nicht ausgeführt.
+
+## Gaming-Konfigurationen für Winhance
+
+Die Datei [`configs/gaming-safe.winhance`](configs/gaming-safe.winhance) aktiviert nur **Game Mode** und **Optimierungen für Fensterspiele**. Sie entfernt keine Apps und ändert weder Sicherheitsfunktionen noch Dienste oder Energiepläne.
+
+Die Datei [`configs/gaming-custom.winhance`](configs/gaming-custom.winhance) ist ein allgemeines Windows-11-Gaming-Profil. Sie wählt Chrome, Steam, Epic Games Launcher, Discord, OBS Studio und Revo Uninstaller zur Installation. Sie entfernt ausgewählte nicht genutzte Windows-Apps und Recall. Microsoft Store sowie Xbox Identity Provider und Xbox Live In-Game Experience bleiben erhalten. Die einzelnen Entscheidungen stehen in [`configs/gaming-custom-entscheidungen.csv`](configs/gaming-custom-entscheidungen.csv).
+
+Das Profil aktiviert Spielmodus, Optimierungen für Fensterspiele und die Option **Task beenden** im Taskleisten-Kontextmenü. Startmenü, Taskleiste, Explorer und Design folgen den gewählten Einstellungen: keine Empfehlungen, Taskleiste links mit Suchsymbol und ohne Widgets, Explorer-Start bei „Dieser PC“, klassisches Kontextmenü, sichtbare Dateiendungen und versteckte Dateien, dunkles Design ohne Transparenzeffekte. Hardwareabhängige Registry-Tweaks, das Abschalten von Sicherheitsfunktionen und das Deaktivieren von Windows-Updates sind nicht enthalten.
+
+Winhance kann Autostart-Apps global um zehn Sekunden verzögern, aber nicht pro App aus dieser Konfiguration entfernen oder beim Spielstart automatisch beenden. Autostart einzelner Apps unter **Einstellungen → Apps → Autostart** oder im Task-Manager verwalten. Die aktivierte Option **Task beenden** erlaubt das manuelle Beenden laufender Apps per Rechtsklick auf der Taskleiste.
+
+Winhance ist nicht Teil des automatischen Downloads, weil seine portable Ausgabe über den eigenen Installer bereitgestellt wird. In Winhance Portable **Import Config** → **Import my own config** wählen und die gewünschte `.winhance`-Datei öffnen. Im standardmäßig aktivierten Review Mode alle Änderungen prüfen und **Apply Config** wählen. Die Funktion zum Überspringen der Prüfung ausgeschaltet lassen. Bei `gaming-custom.winhance` App-Entfernungen und App-Installationen im Importdialog ausdrücklich auswählen, wenn sie sofort ausgeführt werden sollen.
