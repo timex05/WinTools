@@ -1003,7 +1003,7 @@
           {
             "Id": "taskbar-widgets",
             "Name": "Show Widgets",
-            "IsSelected": true,
+            "IsSelected": false,
             "InputType": 0
           },
           {

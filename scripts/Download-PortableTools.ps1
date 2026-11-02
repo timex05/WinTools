@@ -1,8 +1,9 @@
-# Downloads portable Windows tools and the Winhance installer without running them.
+# Downloads portable Windows tools and prepares Winhance in portable mode.
 # Run from PowerShell: .\scripts\Download-PortableTools.ps1
 [CmdletBinding()]
 param(
-    [string]$Destination = (Join-Path (Split-Path -Parent $PSScriptRoot) 'Portable-Tools')
+    [string]$Destination = (Join-Path (Split-Path -Parent $PSScriptRoot) 'Portable-Tools'),
+    [switch]$SkipWinhanceSetup
 )
 
 $ErrorActionPreference = 'Stop'
@@ -305,6 +306,50 @@ function Get-GitHubAsset {
     $release.assets | Where-Object { $_.name -match $Pattern } | Select-Object -First 1
 }
 
+function Initialize-WinhancePortable {
+    param([string]$ToolDirectory)
+    $executable = Join-Path $ToolDirectory 'Winhance.exe'
+    $marker = Join-Path $ToolDirectory 'portable.marker'
+    if ((Test-Path -LiteralPath $executable) -and (Test-Path -LiteralPath $marker)) {
+        $downloadState.Existing = $true
+        return
+    }
+
+    # Leave existing files alone, including incomplete or non-portable installs.
+    $otherFiles = @(Get-ChildItem -LiteralPath $ToolDirectory -Force | Where-Object { $_.Name -ne 'Winhance.Installer.exe' })
+    if ($otherFiles.Count -gt 0) {
+        throw 'Winhance folder contains other files. Remove the incomplete folder before retrying.'
+    }
+    $installer = Join-Path $ToolDirectory 'Winhance.Installer.exe'
+    if (-not (Test-Path -LiteralPath $installer)) { throw 'Winhance installer is missing.' }
+
+    # The official installer cleans its output directory. Use a separate, empty
+    # staging directory so it cannot delete the downloaded installer or configs.
+    $workDirectory = Join-Path ([IO.Path]::GetTempPath()) ('WinTools-Winhance-' + [guid]::NewGuid().ToString('N'))
+    $staging = Join-Path $workDirectory 'Winhance'
+    $setupCopy = Join-Path $workDirectory 'Winhance.Installer.exe'
+    try {
+        $null = New-Item -ItemType Directory -Path $workDirectory
+        Copy-Item -LiteralPath $installer -Destination $setupCopy
+        Set-ToolPhase 'Richte Winhance Portable ein ...'
+        Write-Host '        Winhance Portable wird vorbereitet ...'
+        $arguments = @(
+            '/CURRENTUSER', '/SP-', '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART',
+            '/TASKS="portableinstall"', ('/DIR="{0}"' -f $staging)
+        )
+        $process = Start-Process -FilePath $setupCopy -ArgumentList $arguments -Wait -PassThru
+        if ($process.ExitCode -ne 0) { throw ("Winhance installer exited with code {0}." -f $process.ExitCode) }
+        if (-not ((Test-Path -LiteralPath (Join-Path $staging 'Winhance.exe')) -and
+                  (Test-Path -LiteralPath (Join-Path $staging 'portable.marker')))) {
+            throw 'Winhance installer did not produce a portable application in the requested directory.'
+        }
+        Get-ChildItem -LiteralPath $staging -Force | Move-Item -Destination $ToolDirectory
+        $downloadState.Existing = $false
+    } finally {
+        Remove-Item -LiteralPath $workDirectory -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
 $downloaded = 0
 
 # Direct vendor links, selected from the current official download pages.
@@ -375,11 +420,18 @@ try {
 } catch {}
 Complete-ToolProgress
 
-# Winhance provides its portable option through the official installer. Only download it.
+# Only Winhance's official installer is executed, in portable mode without launch.
 Start-ToolProgress 'Winhance'
 try {
-    if (Save-Portable -Name 'Winhance' -Url 'https://github.com/memstechtips/Winhance/releases/latest/download/Winhance.Installer.exe') { $downloaded++ }
-} catch { Write-Verbose ("Winhance: {0}" -f $_.Exception.Message) }
+    if (Save-Portable -Name 'Winhance' -Url 'https://github.com/memstechtips/Winhance/releases/latest/download/Winhance.Installer.exe') {
+        if (-not $SkipWinhanceSetup) {
+            Initialize-WinhancePortable -ToolDirectory (Join-Path $Destination 'Winhance')
+        }
+        $downloaded++
+    }
+} catch {
+    Write-Warning ("Winhance Portable konnte nicht vorbereitet werden: {0}" -f $_.Exception.Message)
+}
 Complete-ToolProgress
 
 # GPU-Z's download form selects a live mirror and supplies its signed download redirect.
