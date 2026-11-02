@@ -15,6 +15,133 @@ $null = New-Item -ItemType Directory -Path $Destination -Force
 $Destination = (Resolve-Path $Destination).Path
 Set-Content -LiteralPath (Join-Path $Destination '.wintools-portable-tools') -Value 'WinTools portable tools' -Encoding Ascii
 
+function Format-DownloadBytes {
+    param([double]$Bytes)
+    if ($Bytes -ge 1073741824) { return ('{0:N1} GiB' -f ($Bytes / 1073741824)) }
+    if ($Bytes -ge 1048576) { return ('{0:N1} MiB' -f ($Bytes / 1048576)) }
+    if ($Bytes -ge 1024) { return ('{0:N1} KiB' -f ($Bytes / 1024)) }
+    return ('{0:N0} Bytes' -f $Bytes)
+}
+
+function Format-DownloadTime {
+    param([double]$Seconds)
+    $duration = [TimeSpan]::FromSeconds([Math]::Max(0, $Seconds))
+    return ('{0:00}:{1:00}:{2:00}' -f [Math]::Floor($duration.TotalHours), $duration.Minutes, $duration.Seconds)
+}
+
+function Set-ToolPhase {
+    param([string]$Phase)
+    $ProgressPreference = 'Continue'
+    $status = '{0}/{1}: {2} | Gesamtzeit {3}' -f $downloadState.Index, $downloadState.Total, $downloadState.Name, (Format-DownloadTime $downloadState.Clock.Elapsed.TotalSeconds)
+    $percent = [int][Math]::Floor(100 * ($downloadState.Index - 1) / $downloadState.Total)
+    Write-Progress -Id 1 -Activity 'WinTools - Programme herunterladen' -Status $status -CurrentOperation $Phase -PercentComplete $percent
+}
+
+function Start-ToolProgress {
+    param([string]$Name)
+    $downloadState.Index++
+    $downloadState.Name = $Name
+    $downloadState.Before = $downloaded
+    $downloadState.Existing = $false
+    Write-Host ('[{0,2}/{1}] {2}' -f $downloadState.Index, $downloadState.Total, $Name) -ForegroundColor Cyan
+    Set-ToolPhase 'Suche Download ...'
+}
+
+function Complete-ToolProgress {
+    $ProgressPreference = 'Continue'
+    Write-Progress -Id 2 -ParentId 1 -Activity 'Dateidownload' -Completed
+    if ($downloaded -gt $downloadState.Before) {
+        if ($downloadState.Existing) {
+            Write-Host '        Bereits vorhanden' -ForegroundColor DarkGray
+        } else {
+            Write-Host '        Fertig' -ForegroundColor Green
+        }
+    } else {
+        Write-Host '        Nicht verfuegbar - uebersprungen (Details mit -Verbose)' -ForegroundColor Yellow
+    }
+}
+
+function Show-TransferProgress {
+    param([string]$Name, [long]$Received, [long]$Total, [double]$Seconds)
+    $ProgressPreference = 'Continue'
+    $rate = $Received / [Math]::Max(0.001, $Seconds)
+    $percent = -1
+    $remaining = -1
+    $size = 'Groesse unbekannt'
+    $bytes = '{0:N0} Bytes' -f $Received
+    if ($Total -gt 0) {
+        $percent = [int][Math]::Min(100, [Math]::Floor(100.0 * $Received / $Total))
+        $size = '{0}% | {1} / {2}' -f $percent, (Format-DownloadBytes $Received), (Format-DownloadBytes $Total)
+        $bytes = '{0:N0} / {1:N0} Bytes' -f $Received, $Total
+        if ($rate -gt 0) {
+            $remaining = [int][Math]::Min([int]::MaxValue, [Math]::Ceiling([Math]::Max(0, $Total - $Received) / $rate))
+        }
+    } else {
+        $size = '{0} | {1}' -f (Format-DownloadBytes $Received), $size
+    }
+    $eta = if ($remaining -ge 0) { Format-DownloadTime $remaining } else { '--:--:--' }
+    $status = '{0} | {1}/s' -f $size, (Format-DownloadBytes $rate)
+    $detail = '{0} | Zeit {1} | Rest ca. {2}' -f $bytes, (Format-DownloadTime $Seconds), $eta
+    Set-ToolPhase 'Download laeuft ...'
+    Write-Progress -Id 2 -ParentId 1 -Activity "Download: $Name" -Status $status -CurrentOperation $detail -PercentComplete $percent -SecondsRemaining $remaining
+}
+
+function Receive-PortableFile {
+    param([string]$Name, [string]$Url, [string]$OutFile, [string]$Method, [hashtable]$Body)
+    # Stream the response so Windows PowerShell 5.1 can show live byte counts.
+    $request = [Net.HttpWebRequest]::Create($Url)
+    $request.Method = $Method
+    $request.UserAgent = 'WinTools-Portable-Downloader'
+    $request.MaximumAutomaticRedirections = 10
+    $request.Timeout = 300000
+    $request.ReadWriteTimeout = 300000
+    $response = $null
+    $inputStream = $null
+    $outputStream = $null
+    $clock = [Diagnostics.Stopwatch]::StartNew()
+    try {
+        Show-TransferProgress -Name $Name -Received 0 -Total -1 -Seconds 0
+        if ($Body) {
+            $pairs = foreach ($key in $Body.Keys) {
+                '{0}={1}' -f [Net.WebUtility]::UrlEncode([string]$key), [Net.WebUtility]::UrlEncode([string]$Body[$key])
+            }
+            $payload = [Text.Encoding]::UTF8.GetBytes(($pairs -join '&'))
+            $request.ContentType = 'application/x-www-form-urlencoded'
+            $request.ContentLength = $payload.Length
+            $bodyStream = $request.GetRequestStream()
+            try { $bodyStream.Write($payload, 0, $payload.Length) }
+            finally { $bodyStream.Dispose() }
+        }
+        $response = $request.GetResponse()
+        $inputStream = $response.GetResponseStream()
+        $outputStream = [IO.File]::Create($OutFile)
+        $buffer = New-Object byte[] 65536
+        [long]$received = 0
+        $lastUpdate = -1.0
+        while (($read = $inputStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            $outputStream.Write($buffer, 0, $read)
+            $received += $read
+            $downloadState.Bytes += $read
+            if (($clock.Elapsed.TotalSeconds - $lastUpdate) -ge 0.2) {
+                Show-TransferProgress -Name $Name -Received $received -Total $response.ContentLength -Seconds $clock.Elapsed.TotalSeconds
+                $lastUpdate = $clock.Elapsed.TotalSeconds
+            }
+        }
+        if ($response.ContentLength -ge 0 -and $received -ne $response.ContentLength) {
+            throw 'The download ended before all expected bytes arrived.'
+        }
+        Show-TransferProgress -Name $Name -Received $received -Total $response.ContentLength -Seconds $clock.Elapsed.TotalSeconds
+    } finally {
+        $clock.Stop()
+        if ($outputStream) { $outputStream.Dispose() }
+        if ($inputStream) { $inputStream.Dispose() }
+        if ($response) { $response.Dispose() }
+        $request.Abort()
+        $ProgressPreference = 'Continue'
+        Write-Progress -Id 2 -ParentId 1 -Activity "Download: $Name" -Completed
+    }
+}
+
 function Get-ResponseUri {
     param($Response, [string]$Fallback)
     if ($Response.BaseResponse.ResponseUri) { return $Response.BaseResponse.ResponseUri.AbsoluteUri }
@@ -50,6 +177,68 @@ function Get-LabeledLink {
     }
 }
 
+function Expand-PortableArchive {
+    param([string]$Archive, [string]$DestinationPath)
+    try {
+        Expand-Archive -LiteralPath $Archive -DestinationPath $DestinationPath -Force
+        return
+    } catch {
+        Write-Verbose ("Expand-Archive failed; trying Windows ZIP support: {0}" -f $_.Exception.Message)
+    }
+
+    # Windows PowerShell 5.1 cannot expand Deflate64 ZIPs (for example Revo).
+    # Read the file list without opening compressed streams, then use Explorer.
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $root = [IO.Path]::GetFullPath($DestinationPath).TrimEnd('\') + '\'
+    $zip = [IO.Compression.ZipFile]::OpenRead($Archive)
+    try {
+        $files = @(foreach ($entry in $zip.Entries) {
+            $path = [IO.Path]::GetFullPath((Join-Path $root $entry.FullName))
+            if (-not $path.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) {
+                throw 'ZIP entry points outside the extraction directory.'
+            }
+            if ($entry.Name) { @{ Path = $path; Length = $entry.Length } }
+        })
+    } finally { $zip.Dispose() }
+    if ($files.Count -eq 0) { throw 'ZIP contains no files.' }
+
+    # The caller supplies a temporary directory; discard the failed extraction.
+    if (Test-Path -LiteralPath $DestinationPath) {
+        Remove-Item -LiteralPath $DestinationPath -Recurse -Force
+    }
+    $null = New-Item -ItemType Directory -Path $DestinationPath -Force
+    $shell = New-Object -ComObject Shell.Application
+    try {
+        $sourceFolder = $shell.NameSpace($Archive)
+        $targetFolder = $shell.NameSpace($DestinationPath)
+        if (-not $sourceFolder -or -not $targetFolder) { throw 'Windows could not open the ZIP or destination.' }
+        # Suppress progress, overwrite confirmations, and error dialogs.
+        $targetFolder.CopyHere($sourceFolder.Items(), 4 + 16 + 1024)
+
+        # CopyHere is asynchronous. Keep the ZIP until every file is complete.
+        $deadline = [DateTime]::UtcNow.AddSeconds(120)
+        do {
+            $complete = $true
+            foreach ($file in $files) {
+                try {
+                    $stream = [IO.File]::Open($file.Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::None)
+                    try {
+                        if ($stream.Length -ne $file.Length) { $complete = $false }
+                    } finally { $stream.Dispose() }
+                } catch { $complete = $false }
+                if (-not $complete) { break }
+            }
+            if ($complete) { return }
+            Start-Sleep -Milliseconds 200
+        } while ([DateTime]::UtcNow -lt $deadline)
+        throw 'Windows ZIP extraction timed out.'
+    } finally {
+        if ($targetFolder) { $null = [Runtime.InteropServices.Marshal]::ReleaseComObject($targetFolder) }
+        if ($sourceFolder) { $null = [Runtime.InteropServices.Marshal]::ReleaseComObject($sourceFolder) }
+        $null = [Runtime.InteropServices.Marshal]::ReleaseComObject($shell)
+    }
+}
+
 function Save-Portable {
     param([string]$Name, [string]$Url, [string]$FileName, [string]$Method = 'Get', [hashtable]$Body)
     if (-not $Url) { return $false }
@@ -60,22 +249,16 @@ function Save-Portable {
     $FileName = $FileName -replace '[\\/:*?"<>|]', '_'
     $toolDirectory = Join-Path $Destination $Name
     $path = Join-Path $toolDirectory $FileName
-    if (Test-Path $path) { return $true }
-    if ((Test-Path $toolDirectory) -and @(Get-ChildItem -LiteralPath $toolDirectory -Force).Count -gt 0) { return $true }
+    if ((Test-Path $path) -or
+        ((Test-Path $toolDirectory) -and @(Get-ChildItem -LiteralPath $toolDirectory -Force).Count -gt 0)) {
+        $downloadState.Existing = $true
+        return $true
+    }
     $null = New-Item -ItemType Directory -Path $toolDirectory -Force
     $temporary = Join-Path $toolDirectory ($FileName + '.part')
     try {
-        $request = @{
-            Uri = $Url
-            UseBasicParsing = $true
-            OutFile = $temporary
-            MaximumRedirection = 10
-            UserAgent = 'WinTools-Portable-Downloader'
-            TimeoutSec = 300
-            Method = $Method
-        }
-        if ($Body) { $request.Body = $Body }
-        Invoke-WebRequest @request
+        Receive-PortableFile -Name $Name -Url $Url -OutFile $temporary -Method $Method -Body $Body
+        Set-ToolPhase 'Pruefe Download ...'
         if ((Get-Item $temporary).Length -lt 1024) {
             Write-Verbose "$Name returned an incomplete download."
             return $false
@@ -95,8 +278,16 @@ function Save-Portable {
         if ($isZip) {
             $archive = Join-Path $toolDirectory $FileName
             Move-Item -LiteralPath $temporary -Destination $archive
-            try { Expand-Archive -LiteralPath $archive -DestinationPath $toolDirectory -Force }
-            finally { Remove-Item -LiteralPath $archive -Force -ErrorAction SilentlyContinue }
+            $staging = Join-Path ([IO.Path]::GetTempPath()) ('WinTools-' + [guid]::NewGuid().ToString('N'))
+            try {
+                $null = New-Item -ItemType Directory -Path $staging
+                Set-ToolPhase 'Entpacke ZIP ...'
+                Expand-PortableArchive -Archive $archive -DestinationPath $staging
+                Get-ChildItem -LiteralPath $staging -Force | Move-Item -Destination $toolDirectory -Force
+            } finally {
+                Remove-Item -LiteralPath $archive -Force -ErrorAction SilentlyContinue
+                Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
+            }
         } else {
             Move-Item -LiteralPath $temporary -Destination $path
         }
@@ -122,12 +313,25 @@ $tools = @(
     @{ Name = 'HWMonitor'; Page = 'https://www.cpuid.com/softwares/hwmonitor.html'; Pattern = '/downloads/hwmonitor/hwmonitor_[^/?]+\.zip(?:\?|$)'; Landing = $true },
     @{ Name = 'HWiNFO'; Page = 'https://www.hwinfo.com/download/'; Pattern = '(?i)/hwi_\d+\.zip(?:\?|$)' },
     @{ Name = 'WizTree'; Page = 'https://diskanalyzer.com/download'; Pattern = '(?i)wiztree[^/?]*portable[^/?]*\.zip(?:\?|$)' },
-    @{ Name = 'RevoUninstaller'; Url = 'https://download.revouninstaller.com/download/RevoUninstaller_Portable.zip' },
+    @{ Name = 'RevoUninstaller'; Page = 'https://www.revouninstaller.com/start-freeware-download-portable/'; Pattern = '(?i)/RevoUninstaller_Portable\.zip(?:\?|$)' },
     @{ Name = 'HDDLLF'; Page = 'https://hddguru.com/software/HDD-LLF-Low-Level-Format-Tool/'; Pattern = '(?i)HDDLowLevelFormatTool[^/?]*Portable\.exe(?:\?|$)' },
     @{ Name = 'ServiWin'; Url = 'https://www.nirsoft.net/utils/serviwin-x64.zip' }
 )
 
+$downloadState = @{
+    Index = 0
+    Total = $tools.Count + 6
+    Name = ''
+    Before = 0
+    Existing = $false
+    Bytes = [long]0
+    Clock = [Diagnostics.Stopwatch]::StartNew()
+}
+Write-Host "`nWinTools - Portable Downloads" -ForegroundColor Cyan
+Write-Host "Ziel: $Destination`n"
+
 foreach ($tool in $tools) {
+    Start-ToolProgress $tool.Name
     try {
         $urls = if ($tool.Url) { @($tool.Url) } else { @(Get-PageLinks -Page $tool.Page | Where-Object { $_ -match $tool.Pattern }) }
         foreach ($url in $urls) {
@@ -142,6 +346,7 @@ foreach ($tool in $tools) {
             }
         }
     } catch { Write-Verbose ("{0}: {1}" -f $tool.Name, $_.Exception.Message) }
+    Complete-ToolProgress
 }
 
 # Resolve the vendor's HTML redirect, then use SourceForge's binary download endpoint.
@@ -149,6 +354,7 @@ foreach ($item in @(
     @{ Name = 'CrystalDiskInfo'; Product = 'CrystalDiskInfo' },
     @{ Name = 'CrystalDiskMark'; Product = 'CrystalDiskMark' }
 )) {
+    Start-ToolProgress $item.Name
     try {
         $landing = "https://crystalmark.info/redirect.php?product=$($item.Product)"
         $url = Get-LatestLink -Page $landing -Pattern '^https://sourceforge\.net/projects/[^/]+/files/.+\.zip/download(?:\?|$)'
@@ -158,23 +364,30 @@ foreach ($item in @(
             if (Save-Portable -Name $item.Name -Url $directUrl -FileName $fileName) { $downloaded++ }
         }
     } catch { Write-Verbose ("{0}: {1}" -f $item.Name, $_.Exception.Message) }
+    Complete-ToolProgress
 }
 
 # GitHub release assets are versioned and published by the respective developers.
+Start-ToolProgress 'Rufus'
 try {
     $asset = Get-GitHubAsset -Repository 'pbatard/rufus' -Pattern '^rufus-[\d.]+p\.exe$'
     if ($asset -and (Save-Portable -Name 'Rufus' -Url $asset.browser_download_url -FileName $asset.name)) { $downloaded++ }
 } catch {}
+Complete-ToolProgress
 
 # Winhance provides its portable option through the official installer. Only download it.
+Start-ToolProgress 'Winhance'
 try {
     if (Save-Portable -Name 'Winhance' -Url 'https://github.com/memstechtips/Winhance/releases/latest/download/Winhance.Installer.exe') { $downloaded++ }
 } catch { Write-Verbose ("Winhance: {0}" -f $_.Exception.Message) }
+Complete-ToolProgress
 
 # GPU-Z's download form selects a live mirror and supplies its signed download redirect.
+Start-ToolProgress 'GPU-Z'
 try {
     $gpuPath = Join-Path (Join-Path $Destination 'GPU-Z') 'GPU-Z.exe'
     if (Test-Path $gpuPath) {
+        $downloadState.Existing = $true
         $downloaded++
     } else {
         $page = 'https://www.techpowerup.com/download/techpowerup-gpu-z/'
@@ -191,12 +404,21 @@ try {
         }
     }
 } catch { Write-Verbose ("GPU-Z: {0}" -f $_.Exception.Message) }
+Complete-ToolProgress
 
 # DDU's official release is a self-extracting portable executable.
+Start-ToolProgress 'DDU'
 try {
     $article = Get-LabeledLink -Page 'https://www.wagnardsoft.com/software/ddu' -Label 'Download Display Driver Uninstaller'
     $url = Get-LabeledLink -Page $article -Label 'Download DDU.*Portable'
     if (Save-Portable -Name 'DDU' -Url $url -FileName 'DDU-portable.exe') { $downloaded++ }
 } catch {}
+Complete-ToolProgress
 
-Write-Host "$downloaded portable Programme in $Destination"
+$downloadState.Clock.Stop()
+& {
+    $ProgressPreference = 'Continue'
+    Write-Progress -Id 1 -Activity 'WinTools - Programme herunterladen' -Completed
+}
+Write-Host ("`n{0}/{1} Programme verfuegbar | Uebertragen: {2} | Gesamtzeit: {3}" -f $downloaded, $downloadState.Total, (Format-DownloadBytes $downloadState.Bytes), (Format-DownloadTime $downloadState.Clock.Elapsed.TotalSeconds))
+Write-Host "Ziel: $Destination"
