@@ -88,11 +88,13 @@ function Show-TransferProgress {
 }
 
 function Receive-PortableFile {
-    param([string]$Name, [string]$Url, [string]$OutFile, [string]$Method, [hashtable]$Body)
+    param([string]$Name, [string]$Url, [string]$OutFile, [string]$Method, [hashtable]$Body, [string]$Referer)
     # Stream the response so Windows PowerShell 5.1 can show live byte counts.
     $request = [Net.HttpWebRequest]::Create($Url)
     $request.Method = $Method
     $request.UserAgent = 'WinTools-Portable-Downloader'
+    # Some vendors reject direct file requests without their download page.
+    if ($Referer) { $request.Referer = $Referer }
     $request.MaximumAutomaticRedirections = 10
     $request.Timeout = 300000
     $request.ReadWriteTimeout = 300000
@@ -241,7 +243,7 @@ function Expand-PortableArchive {
 }
 
 function Save-Portable {
-    param([string]$Name, [string]$Url, [string]$FileName, [string]$Method = 'Get', [hashtable]$Body)
+    param([string]$Name, [string]$Url, [string]$FileName, [string]$Method = 'Get', [hashtable]$Body, [string]$Referer)
     if (-not $Url) { return $false }
     if (-not $FileName) {
         $FileName = [uri]::UnescapeDataString(([uri]$Url).Segments[-1])
@@ -258,7 +260,7 @@ function Save-Portable {
     $null = New-Item -ItemType Directory -Path $toolDirectory -Force
     $temporary = Join-Path $toolDirectory ($FileName + '.part')
     try {
-        Receive-PortableFile -Name $Name -Url $Url -OutFile $temporary -Method $Method -Body $Body
+        Receive-PortableFile -Name $Name -Url $Url -OutFile $temporary -Method $Method -Body $Body -Referer $Referer
         Set-ToolPhase 'Pruefe Download ...'
         if ((Get-Item $temporary).Length -lt 1024) {
             Write-Verbose "$Name returned an incomplete download."
@@ -356,7 +358,7 @@ $downloaded = 0
 $tools = @(
     @{ Name = 'CPU-Z'; Page = 'https://www.cpuid.com/softwares/cpu-z.html'; Pattern = '/downloads/cpu-z/cpu-z_[^/?]+-en\.zip(?:\?|$)'; Landing = $true },
     @{ Name = 'HWMonitor'; Page = 'https://www.cpuid.com/softwares/hwmonitor.html'; Pattern = '/downloads/hwmonitor/hwmonitor_[^/?]+\.zip(?:\?|$)'; Landing = $true },
-    @{ Name = 'HWiNFO'; Page = 'https://www.hwinfo.com/download/'; Pattern = '(?i)/hwi_\d+\.zip(?:\?|$)' },
+    @{ Name = 'HWiNFO'; Page = 'https://www.hwinfo.com/download/'; Pattern = '(?i)/hwi_\d+\.zip(?:\?|$)'; Referer = 'https://www.hwinfo.com/download/' },
     @{ Name = 'WizTree'; Page = 'https://diskanalyzer.com/download'; Pattern = '(?i)wiztree[^/?]*portable[^/?]*\.zip(?:\?|$)' },
     @{ Name = 'RevoUninstaller'; Page = 'https://www.revouninstaller.com/start-freeware-download-portable/'; Pattern = '(?i)/RevoUninstaller_Portable\.zip(?:\?|$)' },
     @{ Name = 'HDDLLF'; Page = 'https://hddguru.com/software/HDD-LLF-Low-Level-Format-Tool/'; Pattern = '(?i)HDDLowLevelFormatTool[^/?]*Portable\.exe(?:\?|$)' },
@@ -385,7 +387,7 @@ foreach ($tool in $tools) {
                 $fileName = [uri]::UnescapeDataString(([uri]$url).Segments[-1])
                 $url = Get-LatestLink -Page $url -Pattern 'download\.cpuid\.com/.+\.zip(?:\?|$)'
             }
-            if (Save-Portable -Name $tool.Name -Url $url -FileName $fileName) {
+            if (Save-Portable -Name $tool.Name -Url $url -FileName $fileName -Referer $tool.Referer) {
                 $downloaded++
                 break
             }
