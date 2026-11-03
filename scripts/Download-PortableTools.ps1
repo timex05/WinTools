@@ -362,7 +362,9 @@ $tools = @(
     @{ Name = 'WizTree'; Page = 'https://diskanalyzer.com/download'; Pattern = '(?i)wiztree[^/?]*portable[^/?]*\.zip(?:\?|$)' },
     @{ Name = 'RevoUninstaller'; Page = 'https://www.revouninstaller.com/start-freeware-download-portable/'; Pattern = '(?i)/RevoUninstaller_Portable\.zip(?:\?|$)' },
     @{ Name = 'HDDLLF'; Page = 'https://hddguru.com/software/HDD-LLF-Low-Level-Format-Tool/'; Pattern = '(?i)HDDLowLevelFormatTool[^/?]*Portable\.exe(?:\?|$)' },
-    @{ Name = 'ServiWin'; Url = 'https://www.nirsoft.net/utils/serviwin-x64.zip' }
+    @{ Name = 'ServiWin'; Url = 'https://www.nirsoft.net/utils/serviwin-x64.zip' },
+    @{ Name = 'FurMark 2'; Page = 'https://www.geeks3d.com/furmark/downloads/'; Pattern = '(?i)FurMark_2_[^/?]*_win64\.zip(?:\?|$)' },
+    @{ Name = 'Prime95'; Page = 'https://www.mersenne.org/download/'; Pattern = '(?i)p95v[\d.]+b\d+\.win64\.zip(?:\?|$)' }
 )
 
 $downloadState = @{
